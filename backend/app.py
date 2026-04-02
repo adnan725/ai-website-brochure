@@ -5,7 +5,6 @@ from openai import OpenAI
 from bs4 import BeautifulSoup
 import requests
 
-
 # ─── App setup ───────────────────────────────────────────────────────────────
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
 app = Flask(__name__)
@@ -101,8 +100,6 @@ def ask():
     question = data.get("question", "")
     print("Received question:", question)
 
-    # For simplicity, we'll use the same LLM for both summarization and answering
-    # In a real-world scenario, you might want to use different prompts or models
     openai = OpenAI()
     response = openai.chat.completions.create(model="gpt-5-nano", messages=[
         {"role": "user", "content": question}
@@ -111,96 +108,78 @@ def ask():
     print("Generated answer:", result)
     return jsonify({"answer": result})
 
-
-@app.route("/api/create-brochure", methods=["POST", "OPTIONS"])
+@app.route("/api/create-brochure", methods=["POST"])
 def create_brochure():
-    openai = OpenAI()
-    if request.method == "OPTIONS":
-        return jsonify({"message": "OK"}), 200
-    
-    data = request.get_json()
-    url = data.get("url", "")
 
-    link_system_prompt = f"""
-You are provided with a list of links found on a webpage.
-You are able to decide which of the links would be most relevant to include in a brochure about the company,
-such as links to an About page, or a Company page, or Careers/Jobs pages.
-You should respond in JSON as in this example:
+    try:
+        client = OpenAI()
 
-{{
-    "links": [
-        {{"type": "about page", "url": "https://full.url/goes/here/about"}},
-        {{"type": "careers page", "url": "https://another.full.url/careers"}}
-    ]
-}}
+        data = request.get_json()
+        url = data.get("url", "").strip()
+
+        if not url:
+            return jsonify({"error": "URL is required"}), 400
+
+        def fetch_website_contents(url):
+            try:
+                response = requests.get(url, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.content, "html.parser")
+
+                if soup.body:
+                    for tag in soup(["script", "style", "img", "input"]):
+                        tag.decompose()
+                    text = soup.body.get_text(separator="\n", strip=True)
+                else:
+                    text = ""
+
+                title = soup.title.string if soup.title else ""
+                return (title + "\n\n" + text)[:2000]
+
+            except Exception as e:
+                print("❌ Fetch error:", e)
+                return "Could not fetch content"
+
+        content = fetch_website_contents(url)
+
+        messages = [
+            {
+                "role": "system",
+                "content": """
+You are an expert copywriter.
+Create a professional company brochure in clean markdown.
+Include:
+- Company overview
+- Services/products
+- Value proposition
+- Optional careers or culture
+Keep it structured with headings.
 """
+            },
+            {
+                "role": "user",
+                "content": f"Website content:\n{content}"
+            }
+        ]
 
-    def get_links_user_prompt(url):
-        user_prompt = f"""
-        Here is the list of links on the website {url} -
-        Please decide which of these are relevant web links for a brochure about the company, 
-        respond with the full https URL in JSON format.
-        Do not include Terms of Service, Privacy, email links.
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4.1-mini",
+                messages=messages,
+            )
+            brochure = response.choices[0].message.content
 
-        Links (some might be relative links):
+        except Exception as e:
+            print("❌ OpenAI error:", e)
+            return jsonify({"error": "AI generation failed"}), 500
 
-        """
-        links = fetch_website_links(url)
-        user_prompt += "\n".join(links)
-        return user_prompt
+        return jsonify({"brochure": brochure})
 
-    def select_relevant_links(url):
-        response = openai.chat.completions.create(
-            model="gpt-5-nano",
-            messages=[
-                {"role": "system", "content": link_system_prompt},
-                {"role": "user", "content": get_links_user_prompt(url)}
-            ],
-        response_format={"type": "json_object"}
-    )
-        result = response.choices[0].message.content
-        links = json.loads(result)
-        return links
+    except Exception as e:
+        print("❌ Unexpected error:", e)
+        return jsonify({"error": str(e)}), 500
     
-    def fetch_page_and_all_relevant_links(url):
-        contents = fetch_website_contents(url)
-        relevant_links = select_relevant_links(url)
-        result = f"## Landing Page:\n\n{contents}\n## Relevant Links:\n"
-        for link in relevant_links['links']:
-            result += f"\n\n### Link: {link['type']}\n"
-            result += fetch_website_contents(link["url"])
-        return result
-    
-    brochure_system_prompt = """
-You are an assistant that analyzes the contents of several relevant pages from a company website
-and creates a short brochure about the company for prospective customers, investors and recruits.
-Respond in markdown without code blocks.
-Include details of company culture, customers and careers/jobs if you have the information.
-"""
-
-    def get_brochure_user_prompt(company_name, url):
-        user_prompt = f"""
-You are looking at a company called: {company_name}
-Here are the contents of its landing page and other relevant pages;
-use this information to build a short brochure of the company in markdown without code blocks.\n\n
-"""
-        user_prompt += fetch_page_and_all_relevant_links(url)
-        user_prompt = user_prompt[:5_000] # Truncate if more than 5,000 characters
-        return user_prompt
-    
-    def create_brochure(company_name, url):
-        response = openai.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {"role": "system", "content": brochure_system_prompt},
-                {"role": "user", "content": get_brochure_user_prompt(company_name, url)}
-            ],
-        )
-        result = response.choices[0].message.content
-        return result
-
-    return jsonify({"brochure": create_brochure("HuggingFace", url)})
-
 # ─── Entry point ─────────────────────────────────────────────────────────────
 
 @app.route("/", methods=["GET"])
