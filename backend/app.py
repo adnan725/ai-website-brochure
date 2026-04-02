@@ -1,14 +1,10 @@
 import os
-from unittest import result
-from urllib import response
 from certifi import contents
 from flask import Flask, json, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
 from bs4 import BeautifulSoup
-import openai
 import requests
-import tiktoken
 
 
 # ─── App setup ───────────────────────────────────────────────────────────────
