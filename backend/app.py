@@ -1,5 +1,4 @@
 import os
-from certifi import contents
 from flask import Flask, json, request, jsonify
 from flask_cors import CORS
 from openai import OpenAI
@@ -13,11 +12,11 @@ app = Flask(__name__)
 CORS(
     app,
     resources={r"/api/*": {"origins": [
+        "https://brochureai.netlify.app",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:3000", 
-        "http://127.0.0.1:5173",
-        "https://brochureai.netlify.app/"
+        "http://127.0.0.1:5173"
     ]}},
     supports_credentials=True
 )
