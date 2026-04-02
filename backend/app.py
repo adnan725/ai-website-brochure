@@ -207,6 +207,11 @@ use this information to build a short brochure of the company in markdown withou
 def home():
     return "Flask is running ✅"
 
+@app.route("/api/key", methods=["GET"])
+def get_api_key():
+    api_key = os.getenv("OPENAI_API_KEY")
+    return jsonify({"api_key": api_key})
+
 if __name__ == "__main__":
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
