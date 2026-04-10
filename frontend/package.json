@@ -14,7 +14,8 @@
     "jspdf": "^4.2.1",
     "marked": "^17.0.5",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "react-router": "^7.14.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

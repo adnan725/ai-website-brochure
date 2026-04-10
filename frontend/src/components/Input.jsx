@@ -456,7 +456,7 @@ export default function BrochureGenerator() {
     setHtml("");
 
     try {
-      const res  = await fetch("http://127.0.0.1:5000/api/create-brochure", {
+      const res  = await fetch("http://127.0.0.1:50000/api/create-brochure", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ url }),
@@ -497,7 +497,6 @@ export default function BrochureGenerator() {
           <h1>AI Brochure Generator</h1>
           <p>Turn any website into a polished, print-ready company brochure</p>
         </div>
-
         <div className="input-row">
           <input
             className="url-input"
@@ -507,6 +506,7 @@ export default function BrochureGenerator() {
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !loading && handleGenerate()}
           />
+          
           <button
             className="btn-gen"
             onClick={handleGenerate}

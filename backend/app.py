@@ -191,6 +191,52 @@ def get_api_key():
     api_key = os.getenv("OPENAI_API_KEY")
     return jsonify({"api_key": api_key})
 
+from flask import Flask, request, jsonify
+import os
+
+app = Flask(__name__)
+
+# Folder to store uploaded files
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+
+@app.route("/api/meeting-minutes", methods=["POST"])
+def upload_audio():
+    try:
+        # Check if file is present
+        if "audio" not in request.files:
+            return jsonify({"error": "No file part in request"}), 400
+
+        file = request.files["audio"]
+
+        # Check if file is selected
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
+
+        # Optional: validate file type
+        if not file.filename.endswith(".mp3"):
+            return jsonify({"error": "Only .mp3 files are allowed"}), 400
+
+        # Save file (optional but useful)
+        file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+        file.save(file_path)
+
+        return jsonify({
+            "message": "File received successfully",
+            "filename": file.filename,
+            "path": file_path
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
+
 if __name__ == "__main__":
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
