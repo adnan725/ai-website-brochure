@@ -227,8 +227,7 @@ const MeetingMinutes = () => {
               <div style={styles.minutesBox}>
                 <div
                   dangerouslySetInnerHTML={{
-                    __html: parseMarkdown(minutes),
-                  }}
+                    __html: parseMarkdown(minutes),}}
                 />
               </div>
 

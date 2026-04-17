@@ -3,6 +3,8 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { marked } from "marked";
 
+const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
+
 /* ─────────────────────────────────────────────────────
    1.  MARKED CONFIG  —  parse markdown → clean HTML
 ───────────────────────────────────────────────────── */
@@ -456,7 +458,7 @@ export default function BrochureGenerator() {
     setHtml("");
 
     try {
-      const res  = await fetch("http://127.0.0.1:50000/api/create-brochure", {
+      const res  = await fetch(`${BASE_URL}/api/create-brochure`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ url }),
